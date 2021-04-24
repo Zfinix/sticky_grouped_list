@@ -160,8 +160,8 @@ class StickyGroupedListView<T, E> extends StatefulWidget {
 class _StickyGroupedListViewState<T, E>
     extends State<StickyGroupedListView<T, E>> {
   StreamController<int> _streamController = StreamController<int>();
-  late ItemPositionsListener _listener;
-  late GroupedItemScrollController _controller;
+  ItemPositionsListener? _listener;
+  GroupedItemScrollController? _controller;
   GlobalKey? _groupHeaderKey;
   List<T> _sortedElements = [];
   GlobalKey _key = GlobalKey();
@@ -175,14 +175,14 @@ class _StickyGroupedListViewState<T, E>
   void initState() {
     super.initState();
     _controller = widget.itemScrollController ?? GroupedItemScrollController();
-    _controller._bind(this);
+    _controller?._bind(this);
     _listener = widget.itemPositionsListener ?? ItemPositionsListener.create();
-    _listener.itemPositions.addListener(_positionListener);
+    _listener?.itemPositions.addListener(_positionListener);
   }
 
   @override
   void dispose() {
-    _listener.itemPositions.removeListener(_positionListener);
+    _listener?.itemPositions.removeListener(_positionListener);
     _streamController.close();
     super.dispose();
   }
@@ -268,19 +268,22 @@ class _StickyGroupedListViewState<T, E>
       return current.itemTrailingEdge < pos.itemTrailingEdge ? current : pos;
     }
 
-    ItemPosition currentItem = _listener.itemPositions.value
-        .where((ItemPosition position) =>
+    final current = _listener!.itemPositions.value.where(
+        (ItemPosition position) =>
             !_isSeparator!(position.index) &&
-            position.itemTrailingEdge > _headerDimension!)
-        .reduce(reducePositions);
+            position.itemTrailingEdge > _headerDimension!);
 
-    int index = currentItem.index ~/ 2;
-    if (_topElementIndex != index) {
-      E curr = widget.groupBy(_sortedElements[index]);
-      E prev = widget.groupBy(_sortedElements[_topElementIndex]);
-      if (prev != curr) {
-        _topElementIndex = index;
-        _streamController.add(_topElementIndex);
+    if (current.length > 0) {
+      final currentItem = current.reduce(reducePositions);
+
+      int index = currentItem.index ~/ 2;
+      if (_topElementIndex != index) {
+        E curr = widget.groupBy(_sortedElements[index]);
+        E prev = widget.groupBy(_sortedElements[_topElementIndex]);
+        if (prev != curr) {
+          _topElementIndex = index;
+          _streamController.add(_topElementIndex);
+        }
       }
     }
   }
@@ -334,7 +337,7 @@ class _StickyGroupedListViewState<T, E>
 ///
 /// See [ItemScrollController].
 class GroupedItemScrollController extends ItemScrollController {
-  late _StickyGroupedListViewState? _stickyGroupedListViewState;
+  _StickyGroupedListViewState? _stickyGroupedListViewState;
 
   /// Jumps to the element at [index]. The element will be placed under the
   /// group header.
@@ -379,8 +382,8 @@ class GroupedItemScrollController extends ItemScrollController {
   }
 
   void _bind(_StickyGroupedListViewState stickyGroupedListViewState) {
-    assert(_stickyGroupedListViewState == null);
-    _stickyGroupedListViewState = stickyGroupedListViewState;
+    if (_stickyGroupedListViewState == null)
+      _stickyGroupedListViewState = stickyGroupedListViewState;
   }
 }
 
